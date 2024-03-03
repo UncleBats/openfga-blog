@@ -1,0 +1,112 @@
+name: Health Care
+model: |
+    model
+    schema 1.1
+
+    type user
+
+    type health_record
+        relations
+            define view_in_detail: attending_physician
+            define attending_physician: [user] or attending_physician from patient
+            define view_metadata: attending_physician or view_metadata from patient
+            define patient: [patient]
+
+    type hospital
+        relations
+            define physician: [user]
+
+    type patient
+        relations
+            define view_in_detail: attending_physician  
+            define view_metadata: [user, hospital#physician]
+            define attending_physician: [user]
+
+tuples:
+    # Joe is a physician at hospital:VU
+    - user: user:joe
+      relation: physician
+      object: hospital:VU
+    
+    # Karen is a physician at hospital:VU
+    - user: user:karen
+      relation: physician
+      object: hospital:VU
+
+    # hostpital:VU#physician has metadata access to patient:jane
+    - user: hospital:VU#physician
+      relation: view_metadata
+      object: patient:jane
+    
+    # Jane has a health record for a first treatment
+    - user: patient:jane
+      relation: patient
+      object: health_record:treatment1
+
+    # Jane has a health record for a second treatment
+    - user: patient:jane
+      relation: patient
+      object: health_record:treatment2
+
+    # Karen is the attending_physician of patient:jane
+    - user: user:karen
+      relation: attending_physician
+      object: patient:jane
+
+    # Joe is the attending physician for health_record:treatment1
+    - user: user:joe
+      relation: attending_physician
+      object: health_record:treatment1
+
+tests:
+  - name: "joe can view metadata for jane because he is a physician at the hospital"
+    check: 
+      - user: user:joe
+        object: patient:jane
+        assertions: 
+          view_metadata: true
+          view_in_detail: false
+
+  - name: "karen can view all patient data for jane because he is the attending_physician of jane"
+    check: 
+      - user: user:karen
+        object: patient:jane
+        assertions: 
+          view_metadata: true
+          view_in_detail: true
+    
+  - name: "joe can view all for treatment1 because he is the attending_physician of the health record"
+    check: 
+      - user: user:joe
+        object: health_record:treatment1
+        assertions: 
+          view_metadata: true
+          view_in_detail: true
+
+  - name: "joe can view metadata for treatment2 because he is a physician of the hospital"
+    check: 
+      - user: user:joe
+        object: health_record:treatment2
+        assertions: 
+          view_metadata: true
+          view_in_detail: false
+  - name: "Jane has 2 health_records"
+    list_objects:
+      - user: patient:jane
+        type: health_record
+        assertions:
+          patient: [health_record:treatment1, health_record:treatment2]
+  - name: "Karen sees 2 health_records"
+    list_objects:
+      - user: user:karen
+        type: health_record
+        assertions:
+          view_in_detail: [health_record:treatment1, health_record:treatment2]
+          view_metadata: [health_record:treatment1, health_record:treatment2]
+  - name: "Joe sees 1 health_record"
+    list_objects:
+      - user: user:joe
+        type: health_record
+        assertions:
+          view_in_detail: [health_record:treatment1]
+          view_metadata: [health_record:treatment1, health_record:treatment2]
