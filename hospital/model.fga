@@ -1,0 +1,21 @@
+model
+schema 1.1
+
+type user
+
+type health_record
+    relations
+        define view_in_detail: attending_physician
+        define attending_physician: [user] or attending_physician from patient
+        define view_metadata: attending_physician or view_metadata from patient
+        define patient: [patient]
+
+type hospital
+    relations
+        define physician: [user]
+
+type patient
+    relations
+        define view_in_detail: attending_physician  
+        define view_metadata: [user, hospital#physician]
+        define attending_physician: [user]
